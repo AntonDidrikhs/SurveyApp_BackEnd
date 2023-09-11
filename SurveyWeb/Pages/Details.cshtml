@@ -1,0 +1,92 @@
+﻿@page
+@using SurveyEF.Entities
+@model SurveyWeb.Pages.DetailsModel
+
+@{
+    ViewData["Title"] = "Fill";
+}
+
+<h1>Fill out the Survey</h1>
+
+<div>
+    <h4>Survey</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.SurveyEntity.Title)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.SurveyEntity.Title)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.SurveyEntity.Status)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.SurveyEntity.Status)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.SurveyEntity.Description)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.SurveyEntity.Description)
+        </dd>
+    </dl>
+</div>
+<form method="post" asp-page-handler="Save">
+<div>
+    <input type="hidden" asp-for="survey.SurveyId" />
+    <input type="hidden" asp-for="survey.Status" />
+    <input type="hidden" asp-for="survey.DomainReq" />
+        <p>Email:
+        <input type = "email" asp-for= "Email" /></p>
+    @for(int i = 0; i < Model.questions.Count; i++)
+    {
+        <hr />
+        @switch (Model.questions[i])
+        {
+            case TextFieldQuestion tf:
+                <input type="hidden" asp-for="@Model.answers[i].QuestionType" value="TextField" />
+                @Model.questions[i].Text <br />
+                <input asp-for="@Model.answers[i].Answer" value="">
+                    <span asp-validation-for="@Model.answers[i].Answer" class="text-danger"></span>
+                break;
+
+            case MultipleChoiceQuestion mc:
+                    @Model.questionDTOs[i].Text<br />
+            <input type="hidden" asp-for="@Model.answers[i].QuestionType" value="MultipleChoice" />
+            @foreach(var option in Model.questionDTOs[i].Options){
+                <input type="radio" asp-for="@Model.answers[i].Answer" value="@option"> @option<br/>
+                }
+            
+                break;
+            case LikertScaleQuestion ls:
+                    @Model.questionDTOs[i].Text
+                <input type="hidden" asp-for="@Model.answers[i].QuestionType" value="LikertScale" />
+                <h6><input type="radio" asp-for="@Model.answers[i].Answer" value="1">Strongly Disagree</h6>
+                <h6><input type="radio" asp-for="@Model.answers[i].Answer" value="2">Disagree</h6>
+                <h6><input type="radio" asp-for="@Model.answers[i].Answer" value="3">Neutral</h6>
+                <h6><input type="radio" asp-for="@Model.answers[i].Answer" value="4">Agree</h6>
+                <h6><input type="radio" asp-for="@Model.answers[i].Answer" value="5">Strongly Agree</h6>
+                break;
+            case RankingQuestion rn:
+            @Model.questionDTOs[i].Text<br />
+            @for(int ii = 0; ii<Model.questionDTOs[i].Options.Count; ii++){
+                @Model.questionDTOs[i].Options[ii]
+                <select id="rank_@i@ii" asp-for="ranks[i][ii]">
+                    @for(int j = 1; j<=Model.questionDTOs[i].Options.Count; j++){
+                    <option value="@j">@j</option>
+                    }
+                </select>
+                <br />
+            }
+                break;
+        }
+    }
+    <hr />
+        <button type="submit" asp-page-handler="Save" id="Save">Save Answers</button>
+</form>
+    
+</div>
+<div>
+    <a asp-page="./Index">Back to List</a>
+</div>

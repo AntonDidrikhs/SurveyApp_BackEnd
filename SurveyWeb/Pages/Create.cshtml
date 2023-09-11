@@ -1,0 +1,116 @@
+﻿@page
+@using Microsoft.AspNetCore.Components.Forms
+@using SurveyWeb.DTO
+@using SurveyWeb.Extensions
+@model SurveyWeb.Pages.CreateModel
+
+@{
+    ViewData["Title"] = "Create";
+}
+
+<h1>Create a new Survey</h1>
+
+<h4>Survey</h4>
+<hr />
+
+
+<form method="post">
+    <div>
+        <label asp-for="Survey.Title"></label>
+        <input asp-for="Survey.Title" />
+    </div>
+    <div>
+        <label asp-for="Survey.Description"></label>
+        <input asp-for="Survey.Description" />
+    </div>
+    <div>
+        <select id="surveyType" asp-for="Survey.Status">
+            <option value="1">Public</option>
+            <option value="2">Private</option>
+            <option value="3">Domain</option>
+        </select>
+    </div>
+    <div>
+        Required Domain, format "@@example.com" ("Domain" type surveys only):
+        <input asp-for="Survey.DomainReq" />
+        <span asp-validation-for="Survey.DomainReq" class="text-danger"></span>
+    </div>
+    <div>
+        @for(int i = 0; i < Model.questions.Count(); i++)
+        {
+            <hr />
+            <input asp-for="@Model.questions[i].Text">
+            @Html.HiddenFor(model => Model.questions[i].QuestionType)
+            @switch (Model.questions[i])
+            {
+                case TextFieldQDTO tf:
+                    <div>TextFieldQuestion</div>
+                    break;
+                case MultipleChoiceQDTO mc:
+                    <div>MultipleChoiceQuestion</div>
+
+                    @for (int ii = 0; ii < Model.questions[i].Options.Count; ii++)
+                    {
+                        <div><input asp-for="(@Model.questions[i].Options[ii])"></div>
+                    }
+                    break;
+                case LikertScaleQDTO ls:
+                    <div>Likert Scale Question</div>
+                    break;
+                case RankingQDTO rk:
+                    @for (int ii = 0; ii < Model.questions[i].Options.Count; ii++)
+                    {
+                        <div><input asp-for="(@Model.questions[i].Options[ii])"></div>
+                    }
+                    break;
+
+            }
+        }
+    </div>
+    <hr />
+    <div>
+        <button type="submit" asp-page-handler="AddQuestion" id="addQuestion">Add Question</button>
+        <label>Question Type</label>
+        <select id="questionType" asp-for="NewQuestionType">
+            <option value="MultipleChoice">Multiple Choice</option>
+            <option value="TextField">Text Field</option>
+            <option value="LikertScale">Likert Scale</option>
+            <option value="Ranking">Ranking</option>
+        </select>
+            <select id="optionNumbers" asp-for="OptionsNumber">
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+            </select>
+    </div>
+    <button type="submit" asp-page-handler="Save" id="Save">Save Survey</button>
+</form>
+
+<div>
+    <a asp-page="Index">Back to List</a>
+</div>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{<script>
+        var select = document.getElementById('questionType');
+        var number = document.getElementById('optionNumbers');
+
+        function hideShowElement() {
+            var selectValue = select.value;
+            if (seselectValue === 'MultipleChoice') {
+                number.style.display = 'block';
+            } else {
+                number.style.display = 'none';
+            }
+
+        }
+
+        select.addEventListener('change', hideShowElement);
+
+        hideShowElement();
+    </script>}
+}
