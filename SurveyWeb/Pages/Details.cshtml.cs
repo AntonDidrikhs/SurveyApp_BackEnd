@@ -138,10 +138,6 @@ namespace SurveyWeb.Pages
 
         public async Task<IActionResult> OnPostSave(List<AnswerDTO> answers)
         {
-            if (!ModelState.IsValid)
-            {
-                return Page();
-            }
             List<string> answers2 = new List<string>();
             List<string> types = new List<string>();
             List<List<string>> rankStrings = new List<List<string>>( new List<string>[(Request.Form.Keys.Count - 3)/2]);
