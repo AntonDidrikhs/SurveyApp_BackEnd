@@ -10,6 +10,7 @@ namespace SurveyWeb.DTO
         [NotNull]
         [MinLength(1, ErrorMessage ="Answer must be at least 1 character long.")]
         public string Answer { get; set; }
+        public string Email { get; set; }
         public AnswerDTO() { }
 
     }

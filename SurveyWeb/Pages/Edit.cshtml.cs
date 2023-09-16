@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using SurveyEF;
 using SurveyEF.Entities;
 using SurveyWeb.DTO;
@@ -17,11 +18,12 @@ namespace SurveyWeb.Pages
     {
         private readonly SurveyEF.SurveyDBContext _context;
         private readonly SurveyUserServiceEF _service;
-
-        public EditModel(SurveyEF.SurveyDBContext context, SurveyUserServiceEF service)
+        private readonly IHttpClientFactory _clientFactory;
+        public EditModel(SurveyEF.SurveyDBContext context, SurveyUserServiceEF service, IHttpClientFactory clientFactory)
         {
             _context = context;
             _service = service;
+            _clientFactory = clientFactory;
         }
 
         [BindProperty]
@@ -38,31 +40,48 @@ namespace SurveyWeb.Pages
         public async Task<IActionResult> OnGetAsync(int? id)
         {
 
-            if (id == null || _context.Surveys == null)
+            if (id == null)
             {
                 return NotFound();
             }
-            hasAnswers = _context.UserAnswers.Where(a => a.SurveyId == id).Any();
-
-
-            SurvId = id;
-            Survey = new SurveyDTO();
-            Survey.Status = _context.Surveys.Where(s => s.SurveyId == id).FirstOrDefault().Status;
-            Survey.Title = _context.Surveys.Where(s => s.SurveyId == id).FirstOrDefault().Title;
-            Survey.Description = _context.Surveys.Where(s => s.SurveyId == id).FirstOrDefault().Description;
+            var client = _clientFactory.CreateClient();
             
+            var surveyRequest = new HttpRequestMessage(HttpMethod.Get, $@"http://localhost:5041/api/SurveyEntities/{id}");
+            var surveyResponse = await client.SendAsync(surveyRequest);
+            SurveyEntity surveyEntity = new SurveyEntity();
+            if (surveyResponse.IsSuccessStatusCode)
+            {
+                surveyEntity = await surveyResponse.Content.ReadFromJsonAsync<SurveyEntity>();
+                SurvId = id;
+                Survey = new SurveyDTO();
+                Survey.Status = surveyEntity.Status;
+                Survey.Title = surveyEntity.Title;
+                Survey.Description = surveyEntity.Description;
+            }
             
             questions = new List<QuestionDTO> { };
-            var surveyentity =  await _context.Surveys.FirstOrDefaultAsync(m => m.SurveyId == id);
-            if (surveyentity == null)
+
+            var questionRequest = new HttpRequestMessage(HttpMethod.Get, $@"http://localhost:5041/api/SurveyEntities/{id}/Questions");
+            var questionResponse = await client.SendAsync(questionRequest);
+            List<Question> surveyQuestions = new List<Question>();
+            if (questionResponse.IsSuccessStatusCode)
             {
-                return NotFound();
+                var questionDTOResponse = await questionResponse.Content.ReadAsStringAsync();
+                questions = JsonConvert.DeserializeObject<List<QuestionDTO>>(questionDTOResponse, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto });
             }
-            var surveyQuestions = _context.Questions.Where(q => q.SurveyId == id);
-            foreach(var q in surveyQuestions)
+
+            var HasAnswersRequest = new HttpRequestMessage(HttpMethod.Get, $@"http://localhost:5041/api/SurveyEntities/{id}/HasAnswers");
+            var HasAnswersResponse = await client.SendAsync(HasAnswersRequest);
+            if (HasAnswersResponse.IsSuccessStatusCode)
+            {
+                hasAnswers = await HasAnswersResponse.Content.ReadFromJsonAsync<bool>();
+            }
+
+            //var surveyQuestions = _context.Questions.Where(q => q.SurveyId == id);
+            /*foreach (var q in surveyQuestions)
             {
                 questions.Add(_service.QuestionEntityToQuestionDTO(q));
-            }
+            }*/
             //SurveyEntity = surveyentity;
             return Page();
         }
@@ -78,39 +97,30 @@ namespace SurveyWeb.Pages
             //var SurveyMod = _context.Surveys.Where(s => s.SurveyId == SurvId).FirstAsync();
 
             Survey.SurveyQuestions = questions;
-            var NewSurvey = _service.SaveCreatedSurvey(Survey);
-
+            NewSurveyDTO _newSurvey = _service.SurveyDTOtoNewSurveyDTO(Survey);
+            //var NewSurvey = _service.SaveCreatedSurvey(_newSurvey);
+            
+            var client = _clientFactory.CreateClient();
+            
+            
             if (!hasAnswers)
             {
                 if (SurvId.HasValue)
                 {
-                    NewSurvey.SurveyId = (int)SurvId;
+                    _newSurvey.Id = (int)SurvId;
                 }
-                _context.Questions.Where(q => q.SurveyId == SurvId).ExecuteDelete();
-                _context.Update(NewSurvey);
+
+                var response = await client.PutAsJsonAsync($@"http://localhost:5041/api/SurveyEntities/{_newSurvey.Id}/SaveEdit", _newSurvey);
+                //_context.Questions.Where(q => q.SurveyId == SurvId).ExecuteDelete();
+                //_context.Update(NewSurvey);
                 //_context.Attach(NewSurvey).State = EntityState.Modified;
             }
             else
             {
-                _context.Add(NewSurvey);
+                var response = await client.PostAsJsonAsync(@$"http://localhost:5041/NewSurvey/Create", _newSurvey);
             }
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (false)
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
+            
             return RedirectToPage("./Index");
         }
 

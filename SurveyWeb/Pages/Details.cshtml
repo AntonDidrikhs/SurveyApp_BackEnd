@@ -39,19 +39,19 @@
     <input type="hidden" asp-for="survey.DomainReq" />
         <p>Email:
         <input type = "email" asp-for= "Email" /></p>
-    @for(int i = 0; i < Model.questions.Count; i++)
+    @for(int i = 0; i < Model.questionDTOs.Count; i++)
     {
         <hr />
-        @switch (Model.questions[i])
+        @switch (Model.questionDTOs[i].QuestionType)
         {
-            case TextFieldQuestion tf:
+            case "TextField":
                 <input type="hidden" asp-for="@Model.answers[i].QuestionType" value="TextField" />
-                @Model.questions[i].Text <br />
+                @Model.questionDTOs[i].Text <br />
                 <input asp-for="@Model.answers[i].Answer" value="">
                     <span asp-validation-for="@Model.answers[i].Answer" class="text-danger"></span>
                 break;
 
-            case MultipleChoiceQuestion mc:
+            case "MultipleChoice":
                     @Model.questionDTOs[i].Text<br />
             <input type="hidden" asp-for="@Model.answers[i].QuestionType" value="MultipleChoice" />
             @foreach(var option in Model.questionDTOs[i].Options){
@@ -59,7 +59,7 @@
                 }
             
                 break;
-            case LikertScaleQuestion ls:
+            case "LikertScale":
                     @Model.questionDTOs[i].Text
                 <input type="hidden" asp-for="@Model.answers[i].QuestionType" value="LikertScale" />
                 <h6><input type="radio" asp-for="@Model.answers[i].Answer" value="1">Strongly Disagree</h6>
@@ -68,7 +68,7 @@
                 <h6><input type="radio" asp-for="@Model.answers[i].Answer" value="4">Agree</h6>
                 <h6><input type="radio" asp-for="@Model.answers[i].Answer" value="5">Strongly Agree</h6>
                 break;
-            case RankingQuestion rn:
+            case "Ranking":
             @Model.questionDTOs[i].Text<br />
             @for(int ii = 0; ii<Model.questionDTOs[i].Options.Count; ii++){
                 @Model.questionDTOs[i].Options[ii]

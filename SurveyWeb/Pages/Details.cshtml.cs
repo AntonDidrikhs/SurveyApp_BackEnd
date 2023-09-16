@@ -21,6 +21,7 @@ namespace SurveyWeb.Pages
     {
         private readonly SurveyEF.SurveyDBContext _context;
         private readonly IAuthorizationService _authorizationService;
+        private readonly IHttpClientFactory _clientFactory;
 
         [BindProperty]
         public string Email { get; set; }
@@ -34,11 +35,11 @@ namespace SurveyWeb.Pages
         public List<List<string>> ranks { get; set; }
         [BindProperty]
         public List<QuestionDTO> questionDTOs { get; set; }
-        public DetailsModel(SurveyEF.SurveyDBContext context, IAuthorizationService authorizationService)
+        public DetailsModel(SurveyEF.SurveyDBContext context, IAuthorizationService authorizationService, IHttpClientFactory clientFactory)
         {
             _context = context;
             _authorizationService = authorizationService;
-
+            _clientFactory = clientFactory;
 
             answers = new List<AnswerDTO>();
             ranks = new List<List<string>>();
@@ -54,51 +55,20 @@ namespace SurveyWeb.Pages
             }
 
 
-            survey = await _context.Surveys.FirstOrDefaultAsync(m => m.SurveyId == id);
-            var surveyQuestions = _context.Questions.Where(q => q.SurveyId == id).ToList();
-            
-            foreach(var question in surveyQuestions)
+            var surveyRequest = new HttpRequestMessage(HttpMethod.Get, @$"http://localhost:5041/api/SurveyEntities/{id}");
+            var client = _clientFactory.CreateClient();
+            var surveyResponse = await client.SendAsync(surveyRequest);
+            if (surveyResponse.IsSuccessStatusCode)
             {
-                switch(question)
-                {
-                    case TextFieldQuestion tf:
-                        questionDTOs.Add(new TextFieldQDTO { 
-                            Text = question.Text,
-                            IsRequired = question.IsRequired,
-                            QuestionType = "TextField" });
-                        break;
-                    case MultipleChoiceQuestion mc:
-                        var MCQuestion = (MultipleChoiceQuestion)question;
-                        var opts = JsonConvert.DeserializeObject<List<string>>(mc.OptionsJson);
-                        questionDTOs.Add(new MultipleChoiceQDTO
-                        {
-                            Text = question.Text,
-                            IsRequired = question.IsRequired,
-                            QuestionType = "MultipleChoice",
-                            Options = opts
-                        });
-                        break;
-                    case LikertScaleQuestion ls:
-                        questionDTOs.Add(new LikertScaleQDTO
-                        {
-                            Text = question.Text,
-                            IsRequired = question.IsRequired,
-                            QuestionType = "LikertScale"
-                        });
-                        break;
-                    case RankingQuestion rn:
-                        var RNQuestion = (RankingQuestion)question;
-                        List<string> rankText = JsonConvert.DeserializeObject<List<string>>(RNQuestion.OptionsJson);
-                        
-                        questionDTOs.Add(new RankingQDTO
-                        {
-                            Text = question.Text,
-                            IsRequired = question.IsRequired,
-                            QuestionType = "Ranking",
-                            Options = rankText
-                        });
-                        break;
-                }
+                survey = await surveyResponse.Content.ReadFromJsonAsync<SurveyEntity>();
+            }
+
+            var questionRequest = new HttpRequestMessage(HttpMethod.Get, @$"http://localhost:5041/api/SurveyEntities/{id}/Questions");
+            var questionResponse = await client.SendAsync(questionRequest);
+            if (questionResponse.IsSuccessStatusCode)
+            {
+                var questionDTOResponse = await questionResponse.Content.ReadAsStringAsync();
+                questionDTOs = JsonConvert.DeserializeObject<List<QuestionDTO>>(questionDTOResponse, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto });
             }
             
             answers.Capacity = questionDTOs.Count;
@@ -131,7 +101,6 @@ namespace SurveyWeb.Pages
             else 
             {
                 SurveyEntity = survey;
-                questions = surveyQuestions;
             }
             return Page();
         }
@@ -180,66 +149,60 @@ namespace SurveyWeb.Pages
                     {
                         rankStrings[index].Add(Request.Form[key]);
                     }
-                    /*
-                    if (strings[int.Parse(index)] != "Placeholder")
-                    {
-                        strings[int.Parse(index)] = "Placeholder";
-                    }*/
+
                 }
             }
 
 
-            var surveyQuestions = _context.Questions.Where(q => q.SurveyId == survey.SurveyId).ToList();
-            var saveAnswers = new List<UserAnswerEntity>();
-            for (int i = 0; i<answers2.Count; i++)
+            var SaveDTOs = new List<AnswerDTO>();
+            var email = Request.Form["Email"];
+
+            for (int i = 0; i < answers2.Count; i++)
             {
-                switch(types[i])
+                switch (types[i])
                 {
                     case "TextField":
-                        var newTFAnswer = new TextFieldAnswerEntity()
+                        var NewTFDTO = new AnswerDTO()
                         {
-                            UserEmail = Request.Form["Email"],
-                            Survey = _context.Surveys.Where(s => s.SurveyId == survey.SurveyId).First(),
-                            QuestionId = surveyQuestions[i].QuestionId,
-                            Answer = answers2[i]
+                            Answer = answers2[i],
+                            QuestionType = types[i],
+                            Email = email
                         };
-                        saveAnswers.Add(newTFAnswer);
-                        break;
-                    case "MultipleChoice":
-                        var newMCAnswer = new MultipleChoiceAnswerEntity()
-                        {
-                            UserEmail = Request.Form["Email"],
-                            SurveyId = survey.SurveyId,
-                            QuestionId = surveyQuestions[i].QuestionId,
-                            Answer = answers2[i]
-                        };
-                        saveAnswers.Add(newMCAnswer);
+                        SaveDTOs.Add(NewTFDTO);
                         break;
                     case "LikertScale":
-                        var newLSAnswer = new LikertScaleAnswerEntity()
+                        var NewLSDTO = new AnswerDTO()
                         {
-                            UserEmail = Request.Form["Email"],
-                            SurveyId = survey.SurveyId,
-                            QuestionId = surveyQuestions[i].QuestionId,
-                            Answer = answers2[i]
+                            Answer = answers2[i],
+                            QuestionType = types[i],
+                            Email = email
                         };
-                        saveAnswers.Add(newLSAnswer);
+                        SaveDTOs.Add(NewLSDTO);
+                        break;
+                    case "MultipleChoice":
+                        var NewMCDTO = new AnswerDTO()
+                        {
+                            QuestionType = types[i],
+                            Answer = answers2[i],
+                            Email = email
+                        };
+                        SaveDTOs.Add(NewMCDTO);
                         break;
                     case "Ranking":
-                        var jsonRanks = rankStrings[i].ToJson();
-                        var newRNAnswer = new RankingAnswerEntity()
+                        var NewRNDTO = new AnswerDTO()
                         {
-                            UserEmail = Request.Form["Email"],
-                            SurveyId = survey.SurveyId,
-                            QuestionId = surveyQuestions[i].QuestionId,
-                            JsonAnswer = jsonRanks
+                            QuestionType = types[i],
+                            Answer = rankStrings[i].ToJson(),
+                            Email = email
                         };
-                        saveAnswers.Add(newRNAnswer);
+                        SaveDTOs.Add(NewRNDTO);
                         break;
                 }
             }
-            _context.AddRange(saveAnswers);
-            _context.SaveChanges();
+
+            var client = _clientFactory.CreateClient();
+            var answerResponse = await client.PostAsJsonAsync(@$"http://localhost:5041/api/SurveyEntities/{survey.SurveyId}/Questions/Save", SaveDTOs);
+
             return RedirectToPage("./Index");
         }
     }

@@ -13,12 +13,13 @@ namespace SurveyWeb.Pages
     public class DeleteModel : PageModel
     {
         private readonly SurveyEF.SurveyDBContext _context;
+        private readonly IHttpClientFactory _clientFactory;
 
-        
 
-        public DeleteModel(SurveyEF.SurveyDBContext context)
+        public DeleteModel(SurveyEF.SurveyDBContext context, IHttpClientFactory clientFactory)
         {
             _context = context;
+            _clientFactory = clientFactory;
         }
 
         [BindProperty]
@@ -33,8 +34,26 @@ namespace SurveyWeb.Pages
                 return NotFound();
             }
 
-            var surveyentity = await _context.Surveys.FirstOrDefaultAsync(m => m.SurveyId == id);
-            hasAnswers = _context.UserAnswers.Where(a => a.SurveyId == id).Any();
+            var request = new HttpRequestMessage(HttpMethod.Get, $@"http://localhost:5041/api/SurveyEntities/{id}");
+            SurveyEntity surveyentity = new SurveyEntity();
+            var client = _clientFactory.CreateClient();
+            var response = await client.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                surveyentity = await response.Content.ReadFromJsonAsync<SurveyEntity>();
+
+            }
+            var HasAnswersRequest = new HttpRequestMessage(HttpMethod.Get, $@"http://localhost:5041/api/SurveyEntities/{id}/HasAnswers");
+            var HasAnswersResponse = await client.SendAsync(HasAnswersRequest);
+            if (HasAnswersResponse.IsSuccessStatusCode)
+            {
+                hasAnswers = await HasAnswersResponse.Content.ReadFromJsonAsync<bool>();
+            }
+
+
+
+            //var surveyentity = await _context.Surveys.FirstOrDefaultAsync(m => m.SurveyId == id);
+            //hasAnswers = _context.UserAnswers.Where(a => a.SurveyId == id).Any();
             
             if (surveyentity == null)
             {
@@ -53,16 +72,17 @@ namespace SurveyWeb.Pages
             {
                 return NotFound();
             }
-            var surveyentity = await _context.Surveys.FindAsync(id);
 
-            if (surveyentity != null)
+            var client = _clientFactory.CreateClient();
+            var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $@"http://localhost:5041/api/SurveyEntities/{id}/Delete");
+
+            var deleteResponse = await client.SendAsync(deleteRequest);
+            if (deleteResponse.IsSuccessStatusCode)
             {
-                SurveyEntity = surveyentity;
-                _context.Surveys.Remove(SurveyEntity);
-                await _context.SaveChangesAsync();
+                return RedirectToPage("./Index");
             }
-
-            return RedirectToPage("./Index");
+            else { return Page(); }
+            
         }
     }
 }

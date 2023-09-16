@@ -25,6 +25,7 @@ builder.Services.AddScoped<SurveyUserServiceEF>();
 builder.Services.AddSession();
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<SurveyDBContext>();
 builder.Services.AddControllers().AddNewtonsoftJson();
+builder.Services.AddHttpClient();
 
 
 

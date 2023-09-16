@@ -10,6 +10,7 @@ using SurveyEF;
 using Microsoft.Extensions.Options;
 using NuGet.Protocol;
 using Newtonsoft.Json;
+using System.Diagnostics;
 
 namespace SurveyWeb.Services
 {
@@ -69,9 +70,9 @@ namespace SurveyWeb.Services
             }
             throw new NoMatchingQuestionTypeException("Couldn't find a matching Question type.");
         }
-        public SurveyEntity SaveCreatedSurvey(SurveyDTO survey)
+        public SurveyEntity SaveCreatedSurvey(NewSurveyDTO survey)
         {
-            var questionsDTO = survey.SurveyQuestions;
+            var questionsDTO = survey.Questions;
             List<Question> questions = new List<Question>();
             foreach(var question in questionsDTO)
             {
@@ -82,54 +83,57 @@ namespace SurveyWeb.Services
                         savedQuestion = new TextFieldQuestion
                         {
                             Text = question.Text,
-                            IsRequired = question.IsRequired,
 
                         };
                         questions.Add(savedQuestion);
                         break;
                     case "MultipleChoice":
-                        string options = JsonConvert.SerializeObject(question.Options);
-                        var optionsDTO = question.AccessList();
                         savedQuestion = new MultipleChoiceQuestion
                         {
                             Text = question.Text,
-                            IsRequired = question.IsRequired,
-                            OptionsJson = options 
+                            OptionsJson = question.JsonOptions
                         };
                         questions.Add(savedQuestion);
                         break;
                     case "LikertScale":
                         savedQuestion = new LikertScaleQuestion
                         {
-                            Text = question.Text,
-                            IsRequired = question.IsRequired,
+                            Text = question.Text
 
                         };
                         questions.Add(savedQuestion);
                         break;
                     case "Ranking":
-                        string rankOptions = new string("");
-                        var rankOptionsDTO = question.Options;
-                        rankOptions = rankOptionsDTO.ToJson();
                         savedQuestion = new RankingQuestion
                         {
                             Text = question.Text,
-                            IsRequired = question.IsRequired,
-                            OptionsJson = rankOptions
+                            OptionsJson = question.JsonOptions
                         };
                         questions.Add(savedQuestion);
                         break;
                 }
             }
-            if(survey.Status != Status.Domain)
+
+            Status survStatus = Status.Public;
+            switch (survey.Status)
             {
-                survey.DomainReq = null;
+                case "Public":
+                    survStatus = Status.Public;
+                    survey.DomainReq = null;
+                    break;
+                case "Private":
+                    survStatus = Status.Private;
+                    survey.DomainReq = null;
+                    break;
+                case "Domain":
+                    survStatus = Status.Domain;
+                    break;
             }
             var saved = new SurveyEntity
             {
                 Title = survey.Title,
                 Description = survey.Description,
-                Status = survey.Status,
+                Status = survStatus,
                 DomainReq = survey.DomainReq,
                 Questions = questions
             };
@@ -140,6 +144,74 @@ namespace SurveyWeb.Services
             return saved;
 
         }
+        public NewSurveyDTO SurveyDTOtoNewSurveyDTO(SurveyDTO surveyDTO)
+        {
+            NewSurveyDTO save = new NewSurveyDTO()
+            {
+                Title = surveyDTO.Title,
+                Description = surveyDTO.Description
+            };
+            switch (surveyDTO.Status)
+            {
+                case Status.Public:
+                    save.Status = "Public";
+                    break;
+                case Status.Private:
+                    save.Status = "Private";
+                    break;
+                case Status.Domain:
+                    save.Status = "Domain";
+                    break;
+            }
+            if(surveyDTO.DomainReq != null)
+            {
+                save.DomainReq = surveyDTO.DomainReq;
+            }
+            if(surveyDTO.SurveyQuestions != null)
+            {
+                save.Questions = new List<NewQuestionDTO>();
+            }
+            foreach(QuestionDTO question in surveyDTO.SurveyQuestions)
+            {
+                switch (question)
+                {
+                    case TextFieldQDTO tf:
+                        save.Questions.Add(new NewQuestionDTO()
+                        {
+                            QuestionType = "TextField",
+                            Text = question.Text
+                        });
+                        break;
+                    case MultipleChoiceQDTO mc:
+                        save.Questions.Add(new NewQuestionDTO()
+                        {
+                            QuestionType = "MultipleChoice",
+                            Text = mc.Text,
+                            JsonOptions = JsonConvert.SerializeObject(question.Options)
+                        });
+                        break;
+                    case LikertScaleQDTO ls:
+                        save.Questions.Add(new NewQuestionDTO()
+                        {
+                            QuestionType = "LikertScale",
+                            Text = ls.Text
+
+                        });
+                        break;
+                    case RankingQDTO rn:
+                        save.Questions.Add(new NewQuestionDTO()
+                        {
+                            QuestionType = "Ranking",
+                            Text = rn.Text,
+                            JsonOptions = JsonConvert.SerializeObject(question.Options)
+                        });
+                        break;
+                }
+
+            }
+            return save;
+        }
+
 
         public QuestionDTO QuestionEntityToQuestionDTO(Question question)
         {

@@ -13,6 +13,7 @@ using SurveyWeb.DTO;
 using SurveyWeb.Services;
 using SurveyWeb.Extensions;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Newtonsoft.Json;
 
 namespace SurveyWeb.Pages
 {
@@ -20,6 +21,7 @@ namespace SurveyWeb.Pages
     {
         private readonly SurveyEF.SurveyDBContext _context;
         private readonly SurveyUserServiceEF _service;
+        private readonly IHttpClientFactory _clientFactory;
 
         [BindProperty]
         public SurveyDTO Survey { get; set; }
@@ -33,10 +35,11 @@ namespace SurveyWeb.Pages
         public List<QuestionDTO> questions { get; set; }
         
 
-        public CreateModel(SurveyEF.SurveyDBContext context, SurveyUserServiceEF service)
+        public CreateModel(SurveyEF.SurveyDBContext context, SurveyUserServiceEF service, IHttpClientFactory clientFactory)
         {
             _context = context;
             _service = service;
+            _clientFactory = clientFactory;
             Survey = new SurveyDTO();
             //questions = HttpContext.Session.Get<List<QuestionDTO>>("questions") ?? new List<QuestionDTO>();
         }
@@ -47,17 +50,6 @@ namespace SurveyWeb.Pages
             return Page();
         }
 
-        /* Old refresh Method
-        public async Task<IActionResult> OnPostRefreshList() 
-        {
-            //HttpClient client = new HttpClient();
-
-            HttpContext.Session.SetObjectAsJson("surveyQuestions", questions);
-
-            return Page();
-        }
-
-        */
         public async Task<IActionResult> OnPostAddQuestion()
         {
             HttpContext.Session.SetObjectAsJson("surveyQuestions", questions);
@@ -90,9 +82,24 @@ namespace SurveyWeb.Pages
                 return Page();
             }*/
             Survey.SurveyQuestions = questions;
-            var saved = _service.SaveCreatedSurvey(Survey);
+
+            var NewSurvey = _service.SurveyDTOtoNewSurveyDTO(Survey);
+
+            
+
+
+            var client = _clientFactory.CreateClient();
+
+            var response = await client.PostAsJsonAsync(@$"http://localhost:5041/NewSurvey/Create", NewSurvey);
+            /*
             _context.Add(saved);
             _context.SaveChanges();
+            */
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseBody = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error: {response.StatusCode} {responseBody}");
+            }
             HttpContext.Session.Clear();
             return RedirectToPage("./Index");
         }
