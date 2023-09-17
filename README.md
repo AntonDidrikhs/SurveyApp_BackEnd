@@ -10,4 +10,4 @@ Przed uruchomieniem projektu zmień ciąg połączenia wewnątrz SurveyEF\Survey
 
 Author: Anton Didrikhs
 
-Libraries used: EntityFrameworkCore, EntityFrameworkCore.Design, EntityFrameworkCore.SqlServer, AspNetCore.Identity.Entityframework, JWT, AspNetCore.Authentication.JwtBearer, AspNetCore.Components.Forms, AspNetCore.Identity.EntityFrameworkCore, AspNetCore.Identity.UI, AspNetCore.MVC.NewtonsoftJson, Newtonsoft.Jsob, EntityFrameworkCore.SqlServer, EntityFrameworkCore.Tools, VisualStudio.Web.CodeGenerationDesign
+Libraries used: EntityFrameworkCore, EntityFrameworkCore.Design, EntityFrameworkCore.SqlServer, AspNetCore.Identity.Entityframework, JWT, AspNetCore.Authentication.JwtBearer, AspNetCore.Components.Forms, AspNetCore.Identity.EntityFrameworkCore, AspNetCore.Identity.UI, AspNetCore.MVC.NewtonsoftJson, Newtonsoft.Jsob, EntityFrameworkCore.SqlServer, EntityFrameworkCore.Tools, VisualStudio.Web.CodeGenerationDesign, Microsoft.AspNetCore.OpenApi, Swashbuckle.AspNetCore
