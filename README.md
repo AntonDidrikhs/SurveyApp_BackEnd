@@ -6,7 +6,7 @@ Projekt ten umożliwia tworzenie, edytowanie, wysyłanie i wypełnianie ankiet. 
 3. Fill Out/Details - strona umożliwiająca udzielenie odpowiedzi na ankietę i zapisanie tych odpowiedzi w bazie danych. 
 4. Edit - strona umożliwiająca edycję ankiety, zmianę jej tytułu, opisu, typu, a także tekstu pytań ankiety.
 
-Przed uruchomieniem projektu zmień ciąg połączenia wewnątrz SurveyEF\SurveyDBContext.cs na swój serwer i bazę danych. Uruchom "dotnet ef database update --project SurveyEF --startup-project SurveyWeb" w CLI z folderu rozwiązania. Uruchom projekt SurveyWeb
+Przed uruchomieniem projektu zmień ciąg połączenia wewnątrz SurveyEF\SurveyDBContext.cs na swój serwer i bazę danych. Uruchom "dotnet ef database update --project SurveyEF --startup-project SurveyWeb" w CLI z folderu rozwiązania. Upewnij się, że adres URL aplikacji projektu WebAPI jest ustawiony na "http://localhost:5041" (właściwości projektu WebAPI > Debug). Uruchom projekt WebAPI, a następnie projekt SurveyWeb.
 
 Author: Anton Didrikhs
 
